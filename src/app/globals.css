@@ -1,26 +1,149 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: #f5f1e8;
+  --color-paper-soft: #ede7d8;
+  --color-paper-deep: #e6deca;
+  --color-ink: #0c0c0c;
+  --color-ink-soft: #1a1a1a;
+  --color-ink-mute: rgba(12, 12, 12, 0.55);
+  --color-ink-faint: rgba(12, 12, 12, 0.35);
+  --color-line: rgba(12, 12, 12, 0.08);
+  --color-line-strong: rgba(12, 12, 12, 0.15);
+  --color-coral: #ff5a3c;
+  --color-coral-soft: #ffe1d6;
+  --color-coral-deep: #d83a1d;
+
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-onest);
+  --font-mono: var(--font-plex-mono);
+  --font-jp-display: var(--font-shippori);
+  --font-jp-sans: var(--font-zen-kaku);
+
+  --container-screen: 1440px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-paper);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-jp-sans), var(--font-sans), -apple-system, BlinkMacSystemFont, "Hiragino Sans", "ヒラギノ角ゴ ProN", sans-serif;
+  font-feature-settings: "palt", "kern";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-coral);
+  color: var(--color-paper);
+}
+
+/* Editorial display utilities */
+.font-display { font-family: var(--font-display), var(--font-jp-display), serif; }
+.font-jp-display { font-family: var(--font-jp-display), var(--font-display), serif; }
+.font-sans-en { font-family: var(--font-sans), -apple-system, sans-serif; }
+.font-jp-sans { font-family: var(--font-jp-sans), var(--font-sans), sans-serif; }
+.font-mono { font-family: var(--font-mono), ui-monospace, monospace; }
+
+/* Editorial number styling — slim italic Fraunces opsz 144 */
+.num-display {
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 144, "SOFT" 0;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  font-feature-settings: "tnum", "lnum";
+}
+
+.label-en {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* Hairline rule */
+.rule {
+  border-color: var(--color-line);
+}
+.rule-strong {
+  border-color: var(--color-line-strong);
+}
+
+/* Layout grid */
+.grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(16px, 2vw, 24px);
+}
+
+.section-pad {
+  padding-top: clamp(96px, 14vw, 192px);
+  padding-bottom: clamp(96px, 14vw, 192px);
+}
+
+.container-page {
+  max-width: var(--container-screen);
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 56px);
+}
+
+/* Reveal animation primitive */
+.reveal-line {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+.reveal-line > span {
+  display: inline-block;
+  transform: translateY(110%);
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.is-revealed .reveal-line > span,
+.reveal-line.is-revealed > span {
+  transform: translateY(0);
+}
+
+/* Marquee */
+.marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 60s linear infinite;
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Smooth scroll bookkeeping (Lenis) */
+html.lenis, html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Disable smooth scroll on reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
