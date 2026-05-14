@@ -5,31 +5,14 @@ import { Float, Points, PointMaterial, Environment, Html } from "@react-three/dr
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-/* ───────── Spiral curve (shared between geometry + panel placement) ───────── */
+/* ───────── Constants ───────── */
 
-const SPIRAL_TURNS = 4.5;
-const SPIRAL_HEIGHT = 24;
-const SPIRAL_RADIUS_TOP = 2.2;
-const SPIRAL_RADIUS_BOT = 1.4;
+const RING_RADIUS = 4.0; // distance from center to panel
+const SPHERE_RADIUS = 1.4;
+const PANEL_W = 2.4;
+const PANEL_H = 1.4;
 
-class SpiralCurve extends THREE.Curve<THREE.Vector3> {
-  // eslint-disable-next-line @typescript-eslint/no-useless-constructor
-  constructor() {
-    super();
-  }
-  getPoint(t: number, target = new THREE.Vector3()) {
-    const angle = SPIRAL_TURNS * Math.PI * 2 * t;
-    const radius = SPIRAL_RADIUS_TOP - (SPIRAL_RADIUS_TOP - SPIRAL_RADIUS_BOT) * t;
-    const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
-    const y = SPIRAL_HEIGHT * (0.5 - t);
-    return target.set(x, y, z);
-  }
-}
-
-const sampleSpiral = (t: number) => new SpiralCurve().getPoint(t);
-
-/* ───────── 3D Panel (rung on the helix) ───────── */
+/* ───────── Section panel data ───────── */
 
 type PanelData = {
   num: string;
@@ -38,243 +21,6 @@ type PanelData = {
   enTitle: string;
   body: string;
 };
-
-function Panel({
-  data,
-  t,
-  progressRef,
-}: {
-  data: PanelData;
-  t: number; // 0..1 position along spiral
-  progressRef: { current: number };
-}) {
-  const groupRef = useRef<THREE.Group>(null);
-  const matRef = useRef<THREE.MeshStandardMaterial>(null);
-
-  const position = useMemo(() => sampleSpiral(t), [t]);
-  const tmpVec = useMemo(() => new THREE.Vector3(), []);
-
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const distance = Math.abs(progressRef.current - t);
-    const active = Math.max(0, 1 - distance * 5);
-    const baseScale = 0.55 + active * 0.5;
-    groupRef.current.scale.setScalar(baseScale);
-    if (matRef.current) {
-      matRef.current.emissiveIntensity = 0.05 + active * 0.45;
-      matRef.current.opacity = 0.4 + active * 0.55;
-    }
-    const bob = Math.sin(state.clock.getElapsedTime() * 1.2 + t * 10) * 0.04;
-    groupRef.current.position.y = position.y + bob;
-    // Billboard toward camera
-    state.camera.getWorldPosition(tmpVec);
-    groupRef.current.lookAt(tmpVec);
-  });
-
-  return (
-    <group ref={groupRef} position={position}>
-      <group>
-        {/* Panel surface */}
-        <mesh>
-          <planeGeometry args={[2.4, 1.4]} />
-          <meshStandardMaterial
-            ref={matRef}
-            color="#0a0a0a"
-            emissive="#ff5a3c"
-            emissiveIntensity={0.15}
-            transparent
-            opacity={0.8}
-            side={THREE.DoubleSide}
-            metalness={0.7}
-            roughness={0.3}
-          />
-        </mesh>
-        {/* Coral border frame */}
-        <lineSegments position={[0, 0, 0.002]}>
-          <edgesGeometry args={[new THREE.PlaneGeometry(2.4, 1.4)]} />
-          <lineBasicMaterial color="#ff5a3c" transparent opacity={0.9} />
-        </lineSegments>
-        {/* Panel content (drei Html transform-mode) */}
-        <Html
-          transform
-          distanceFactor={1.6}
-          position={[0, 0, 0.01]}
-          style={{
-            width: "560px",
-            height: "320px",
-            pointerEvents: "none",
-          }}
-        >
-          <div className="size-full bg-bg/85 backdrop-blur-md border border-coral/40 px-10 py-8 flex flex-col gap-4 text-fg">
-            <div className="flex items-center justify-between label-mono text-fg-mute">
-              <span className="text-coral">→ {data.num}</span>
-              <span>[ {data.label} ]</span>
-            </div>
-            <h3 className="font-jp-display text-[44px] leading-[1.05] font-medium">
-              {data.jpTitle}
-            </h3>
-            <div className="label-mono text-fg-mute">→ {data.enTitle}</div>
-            <p className="font-jp-sans text-[13px] leading-[1.7] text-fg-soft mt-auto">
-              {data.body}
-            </p>
-          </div>
-        </Html>
-      </group>
-    </group>
-  );
-}
-
-/* ───────── Helix geometry mesh ───────── */
-
-function Spiral({ progress }: { progress: { current: number } }) {
-  const ref = useRef<THREE.Group>(null);
-  const matRef = useRef<THREE.MeshStandardMaterial>(null);
-
-  const geometry = useMemo(() => {
-    return new THREE.TubeGeometry(new SpiralCurve(), 800, 0.06, 14, false);
-  }, []);
-
-  useFrame((state) => {
-    if (!ref.current) return;
-    const t = state.clock.getElapsedTime();
-    // Spiral rotates slowly on its own (camera follows active panel for scroll)
-    ref.current.rotation.y = t * 0.06;
-    if (matRef.current) {
-      matRef.current.emissiveIntensity = 0.4 + Math.sin(t * 1.2) * 0.15;
-    }
-  });
-
-  return (
-    <group ref={ref}>
-      <mesh geometry={geometry}>
-        <meshStandardMaterial
-          ref={matRef}
-          color="#ff5a3c"
-          emissive="#ff5a3c"
-          emissiveIntensity={0.5}
-          roughness={0.15}
-          metalness={0.85}
-        />
-      </mesh>
-
-      {/* Inner core sphere with iridescence — sits at top of spiral */}
-      <mesh position={[0, SPIRAL_HEIGHT * 0.45, 0]}>
-        <icosahedronGeometry args={[0.5, 4]} />
-        <meshPhysicalMaterial
-          color="#1a1a1a"
-          roughness={0.05}
-          metalness={1}
-          iridescence={1}
-          iridescenceIOR={1.6}
-          iridescenceThicknessRange={[100, 700]}
-          clearcoat={1}
-          clearcoatRoughness={0.05}
-        />
-      </mesh>
-
-      {/* Coral glow halos — distributed along spiral */}
-      <pointLight position={[0, SPIRAL_HEIGHT * 0.4, 0]} color="#ff5a3c" intensity={5} distance={10} decay={1.2} />
-      <pointLight position={[0, 0, 0]} color="#ff5a3c" intensity={4} distance={10} decay={1.2} />
-      <pointLight position={[0, -SPIRAL_HEIGHT * 0.4, 0]} color="#ff5a3c" intensity={4} distance={10} decay={1.2} />
-    </group>
-  );
-}
-
-/* ───────── Particle field ───────── */
-
-function Particles({ count = 2400 }: { count?: number }) {
-  const ref = useRef<THREE.Points>(null);
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const r = 5 + Math.random() * 8;
-      const theta = Math.random() * Math.PI * 2;
-      const y = (Math.random() - 0.5) * SPIRAL_HEIGHT * 1.4;
-      arr[i * 3] = r * Math.cos(theta);
-      arr[i * 3 + 1] = y;
-      arr[i * 3 + 2] = r * Math.sin(theta);
-    }
-    return arr;
-  }, [count]);
-
-  useFrame((state) => {
-    if (!ref.current) return;
-    const t = state.clock.getElapsedTime();
-    ref.current.rotation.y = t * 0.04;
-  });
-
-  return (
-    <Points ref={ref} positions={positions} stride={3}>
-      <PointMaterial
-        size={0.014}
-        sizeAttenuation
-        transparent
-        depthWrite={false}
-        color="#ff7a5c"
-        opacity={0.85}
-      />
-    </Points>
-  );
-}
-
-/* ───────── Camera descends Y based on scroll progress ───────── */
-
-function ScrollCamera({ progress }: { progress: { current: number } }) {
-  const { camera } = useThree();
-  const targetPos = useRef(new THREE.Vector3(0, SPIRAL_HEIGHT * 0.5, 0));
-  const lookTarget = useRef(new THREE.Vector3(0, SPIRAL_HEIGHT * 0.5, 0));
-
-  useFrame(() => {
-    const p = progress.current;
-
-    // Active panel position based on scroll
-    const panelT = p; // active panel parametric position
-    const activePanel = sampleSpiral(panelT);
-
-    // Camera in front of the panel (panel + offset along its outward direction)
-    const angle = Math.atan2(activePanel.x, activePanel.z);
-    const standOff = 4.2; // distance from panel to camera
-    targetPos.current.set(
-      activePanel.x + Math.sin(angle) * standOff,
-      activePanel.y + 0.2,
-      activePanel.z + Math.cos(angle) * standOff
-    );
-
-    // LookAt: directly at the panel
-    lookTarget.current.copy(activePanel);
-
-    // Smooth interpolation
-    camera.position.lerp(targetPos.current, 0.12);
-    camera.lookAt(lookTarget.current);
-  });
-  return null;
-}
-
-/* ───────── Mouse parallax ───────── */
-
-function MouseParallax({ children }: { children: React.ReactNode }) {
-  const ref = useRef<THREE.Group>(null);
-  const target = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      target.current.x = (e.clientX / window.innerWidth - 0.5) * 0.18;
-      target.current.y = (e.clientY / window.innerHeight - 0.5) * 0.12;
-    };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
-
-  useFrame(() => {
-    if (!ref.current) return;
-    ref.current.rotation.y += (target.current.x - ref.current.rotation.y) * 0.05;
-    ref.current.rotation.x += (target.current.y - ref.current.rotation.x) * 0.05;
-  });
-
-  return <group ref={ref}>{children}</group>;
-}
-
-/* ───────── Section panel data ───────── */
 
 const PANELS: PanelData[] = [
   {
@@ -335,6 +81,239 @@ const PANELS: PanelData[] = [
   },
 ];
 
+/* ───────── Central iridescent sphere (the brand object) ───────── */
+
+function Centerpiece() {
+  const ref = useRef<THREE.Group>(null);
+  const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
+
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    if (ref.current) {
+      ref.current.rotation.y = t * 0.18;
+      ref.current.rotation.x = Math.sin(t * 0.22) * 0.15;
+    }
+  });
+
+  return (
+    <group ref={ref}>
+      {/* Iridescent core sphere */}
+      <mesh>
+        <icosahedronGeometry args={[SPHERE_RADIUS, 6]} />
+        <meshPhysicalMaterial
+          ref={matRef}
+          color="#0c0c0c"
+          roughness={0.04}
+          metalness={1}
+          iridescence={1}
+          iridescenceIOR={1.7}
+          iridescenceThicknessRange={[120, 700]}
+          clearcoat={1}
+          clearcoatRoughness={0.05}
+        />
+      </mesh>
+
+      {/* Subtle outer wireframe halo for techy feel */}
+      <mesh>
+        <icosahedronGeometry args={[SPHERE_RADIUS * 1.18, 1]} />
+        <meshBasicMaterial
+          color="#ff5a3c"
+          wireframe
+          transparent
+          opacity={0.18}
+        />
+      </mesh>
+
+      {/* Inner coral light source */}
+      <pointLight color="#ff5a3c" intensity={4} distance={10} decay={1.4} />
+    </group>
+  );
+}
+
+/* ───────── Single panel (3D with Html content), positioned in ring ───────── */
+
+function Panel({
+  data,
+  index,
+  total,
+  ringRotationRef,
+}: {
+  data: PanelData;
+  index: number;
+  total: number;
+  ringRotationRef: { current: number };
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const htmlContentRef = useRef<HTMLDivElement>(null);
+
+  // Base angle so panel 0 sits at +Z (in front of camera at scroll=0)
+  const baseAngle = (index / total) * Math.PI * 2 + Math.PI / 2;
+
+  const camPos = useMemo(() => new THREE.Vector3(), []);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+
+    // Effective angle = base + ring rotation (driven by scroll)
+    const angle = baseAngle + ringRotationRef.current;
+
+    // Position around the ring
+    const x = Math.cos(angle) * RING_RADIUS;
+    const z = Math.sin(angle) * RING_RADIUS;
+    const bob = Math.sin(state.clock.getElapsedTime() * 0.8 + index * 0.7) * 0.06;
+    groupRef.current.position.set(x, bob, z);
+
+    // Billboard toward camera
+    state.camera.getWorldPosition(camPos);
+    groupRef.current.lookAt(camPos);
+
+    // Active state: panel closest to camera. Use the same atan2(z, x)
+    // convention as the panel's `angle` (computed from cos/sin above).
+    const camDir = Math.atan2(camPos.z, camPos.x);
+    let angleDiff = ((angle - camDir + Math.PI) % (Math.PI * 2)) - Math.PI;
+    angleDiff = Math.abs(angleDiff);
+    // angleDiff is 0 when panel is directly toward camera, π when opposite
+    const closeness = 1 - angleDiff / Math.PI; // 1 = front, 0 = back
+
+    // Active = sharp falloff for front. Back panel gets a small "ghost" boost
+    // so the user can see it across the sphere as a silhouette.
+    const frontWeight = Math.pow(closeness, 4); // sharp peak at front
+    const backWeight = Math.pow(1 - closeness, 6) * 0.3; // tiny peak at back
+    const active = Math.max(frontWeight, backWeight);
+
+    // Scale: front large, back small, sides smallest
+    const scale = 0.35 + frontWeight * 0.7 + backWeight * 0.3;
+    groupRef.current.scale.setScalar(scale);
+
+    if (matRef.current) {
+      matRef.current.emissiveIntensity = 0.05 + active * 0.55;
+      matRef.current.opacity = 0.15 + active * 0.7;
+    }
+    if (htmlContentRef.current) {
+      // Hide content entirely on side panels — only front (and faintly back) shows text
+      htmlContentRef.current.style.opacity = String(
+        Math.max(frontWeight, backWeight * 0.5)
+      );
+    }
+
+    // Position lift: active (front) panel sits slightly higher
+    groupRef.current.position.y += frontWeight * 0.15;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh>
+        <planeGeometry args={[PANEL_W, PANEL_H]} />
+        <meshStandardMaterial
+          ref={matRef}
+          color="#0a0a0a"
+          emissive="#ff5a3c"
+          emissiveIntensity={0.15}
+          transparent
+          opacity={0.7}
+          side={THREE.DoubleSide}
+          metalness={0.7}
+          roughness={0.3}
+        />
+      </mesh>
+      <lineSegments position={[0, 0, 0.002]}>
+        <edgesGeometry args={[new THREE.PlaneGeometry(PANEL_W, PANEL_H)]} />
+        <lineBasicMaterial color="#ff5a3c" transparent opacity={0.95} />
+      </lineSegments>
+      <Html
+        transform
+        distanceFactor={1.6}
+        position={[0, 0, 0.01]}
+        style={{
+          width: "560px",
+          height: "320px",
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          ref={htmlContentRef}
+          className="size-full bg-bg/85 backdrop-blur-md border border-coral/40 px-10 py-8 flex flex-col gap-4 text-fg transition-opacity duration-200"
+          style={{ opacity: 0 }}
+        >
+          <div className="flex items-center justify-between label-mono text-fg-mute">
+            <span className="text-coral">→ {data.num}</span>
+            <span>[ {data.label} ]</span>
+          </div>
+          <h3 className="font-jp-display text-[44px] leading-[1.05] font-medium">
+            {data.jpTitle}
+          </h3>
+          <div className="label-mono text-fg-mute">→ {data.enTitle}</div>
+          <p className="font-jp-sans text-[13px] leading-[1.7] text-fg-soft mt-auto">
+            {data.body}
+          </p>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+/* ───────── Particles around the scene ───────── */
+
+function Particles({ count = 2400 }: { count?: number }) {
+  const ref = useRef<THREE.Points>(null);
+  const positions = useMemo(() => {
+    const arr = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const r = 7 + Math.random() * 8;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      arr[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      arr[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) * 0.6;
+      arr[i * 3 + 2] = r * Math.cos(phi);
+    }
+    return arr;
+  }, [count]);
+
+  useFrame((state) => {
+    if (!ref.current) return;
+    const t = state.clock.getElapsedTime();
+    ref.current.rotation.y = t * 0.04;
+  });
+
+  return (
+    <Points ref={ref} positions={positions} stride={3}>
+      <PointMaterial
+        size={0.012}
+        sizeAttenuation
+        transparent
+        depthWrite={false}
+        color="#ff7a5c"
+        opacity={0.85}
+      />
+    </Points>
+  );
+}
+
+/* ───────── Mouse parallax wrapper ───────── */
+
+function MouseParallax({ children }: { children: React.ReactNode }) {
+  const ref = useRef<THREE.Group>(null);
+  const target = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      target.current.x = (e.clientX / window.innerWidth - 0.5) * 0.16;
+      target.current.y = (e.clientY / window.innerHeight - 0.5) * 0.10;
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+
+  useFrame(() => {
+    if (!ref.current) return;
+    ref.current.rotation.y += (target.current.x - ref.current.rotation.y) * 0.05;
+    ref.current.rotation.x += (target.current.y - ref.current.rotation.x) * 0.05;
+  });
+
+  return <group ref={ref}>{children}</group>;
+}
+
 /* ───────── Public component ───────── */
 
 export function World({
@@ -342,38 +321,60 @@ export function World({
 }: {
   progressRef: { current: number };
 }) {
+  // Smoothed ring rotation that reads scroll progress
+  const ringRotationRef = useRef(0);
+
   return (
     <div className="fixed inset-0 z-0">
       <Canvas
         dpr={[1, 1.6]}
-        camera={{ position: [0, 12, 5.5], fov: 42 }}
+        camera={{ position: [0, 0.6, 8.5], fov: 38 }}
         gl={{ antialias: true, alpha: true }}
       >
         <color attach="background" args={["#050505"]} />
-        <fog attach="fog" args={["#050505", 8, 24]} />
+        <fog attach="fog" args={["#050505", 9, 22]} />
 
         <ambientLight intensity={0.18} />
-        <directionalLight position={[3, 5, 4]} intensity={0.6} color="#ffe1d6" />
+        <directionalLight position={[3, 5, 4]} intensity={0.55} color="#ffe1d6" />
         <directionalLight position={[-4, -2, -3]} intensity={0.4} color="#b566ff" />
+
+        <RingDriver progressRef={progressRef} ringRotationRef={ringRotationRef} />
 
         <MouseParallax>
           <Float speed={0.8} rotationIntensity={0.06} floatIntensity={0.15}>
-            <Spiral progress={progressRef} />
+            <Centerpiece />
             {PANELS.map((p, i) => (
               <Panel
                 key={p.num}
                 data={p}
-                t={(i + 0.5) / PANELS.length}
-                progressRef={progressRef}
+                index={i}
+                total={PANELS.length}
+                ringRotationRef={ringRotationRef}
               />
             ))}
           </Float>
-          <Particles count={2800} />
+          <Particles count={2400} />
         </MouseParallax>
 
-        <ScrollCamera progress={progressRef} />
         <Environment preset="night" />
       </Canvas>
     </div>
   );
+}
+
+/* Smoothly drives ring rotation from scroll progress.
+   Total scroll = exactly one full revolution (2π) so each of the 8 panels
+   passes through the front of the camera once during the scroll. */
+function RingDriver({
+  progressRef,
+  ringRotationRef,
+}: {
+  progressRef: { current: number };
+  ringRotationRef: { current: number };
+}) {
+  useFrame(() => {
+    const target = -progressRef.current * Math.PI * 2;
+    ringRotationRef.current += (target - ringRotationRef.current) * 0.1;
+  });
+  return null;
 }
