@@ -105,10 +105,12 @@ function Panel({
           style={{
             width: "560px",
             height: "320px",
-            pointerEvents: "none",
           }}
         >
-          <div className="size-full bg-bg/85 backdrop-blur-md border border-coral/40 px-10 py-8 flex flex-col gap-4 text-fg">
+          <div
+            className="size-full bg-bg/85 backdrop-blur-md border border-coral/40 px-10 py-8 flex flex-col gap-4 text-fg"
+            style={{ pointerEvents: "none" }}
+          >
             <div className="flex items-center justify-between label-mono text-fg-mute">
               <span className="text-coral">→ {data.num}</span>
               <span>[ {data.label} ]</span>
@@ -172,7 +174,7 @@ function Spiral({ progress }: { progress: { current: number } }) {
 
       {/* Inner core sphere with iridescence — sits at top of spiral */}
       <mesh position={[0, SPIRAL_HEIGHT * 0.45, 0]}>
-        <icosahedronGeometry args={[0.5, 4]} />
+        <icosahedronGeometry args={[1.4, 6]} />
         <meshPhysicalMaterial
           color="#1a1a1a"
           roughness={0.05}
