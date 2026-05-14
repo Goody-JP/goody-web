@@ -54,26 +54,6 @@ body {
   transition: background 0.6s ease, color 0.6s ease;
 }
 
-/* Day theme overrides — applied via .day class on <html> */
-html.day {
-  background: var(--color-paper);
-  color-scheme: light;
-}
-html.day body {
-  background: var(--color-paper);
-  color: var(--color-ink);
-}
-html.day {
-  --color-fg: #0c0c0c;
-  --color-fg-soft: rgba(12, 12, 12, 0.72);
-  --color-fg-mute: rgba(12, 12, 12, 0.55);
-  --color-fg-faint: rgba(12, 12, 12, 0.35);
-  --color-line: rgba(12, 12, 12, 0.10);
-  --color-line-strong: rgba(12, 12, 12, 0.20);
-  --color-bg: #f5f1e8;
-  --color-bg-soft: #efe8d8;
-  --color-bg-mid: #e8dec5;
-}
 
 ::selection {
   background: var(--color-coral);
