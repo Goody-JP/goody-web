@@ -1,18 +1,23 @@
 @import "tailwindcss";
 
 @theme inline {
+  --color-bg: #050505;
+  --color-bg-soft: #0a0a0a;
+  --color-bg-mid: #111111;
+  --color-bg-elev: #1a1a1a;
   --color-paper: #f5f1e8;
-  --color-paper-soft: #ede7d8;
-  --color-paper-deep: #e6deca;
   --color-ink: #0c0c0c;
-  --color-ink-soft: #1a1a1a;
-  --color-ink-mute: rgba(12, 12, 12, 0.55);
-  --color-ink-faint: rgba(12, 12, 12, 0.35);
-  --color-line: rgba(12, 12, 12, 0.08);
-  --color-line-strong: rgba(12, 12, 12, 0.15);
+  --color-fg: #f5f5f1;
+  --color-fg-soft: rgba(245, 245, 241, 0.72);
+  --color-fg-mute: rgba(245, 245, 241, 0.45);
+  --color-fg-faint: rgba(245, 245, 241, 0.22);
+  --color-line: rgba(245, 245, 241, 0.08);
+  --color-line-strong: rgba(245, 245, 241, 0.18);
   --color-coral: #ff5a3c;
-  --color-coral-soft: #ffe1d6;
-  --color-coral-deep: #d83a1d;
+  --color-coral-bright: #ff7a5c;
+  --color-coral-soft: rgba(255, 90, 60, 0.18);
+  --color-cyan: #6cf2ff;
+  --color-violet: #b566ff;
 
   --font-display: var(--font-fraunces);
   --font-sans: var(--font-onest);
@@ -24,36 +29,41 @@
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+}
+
+@media (pointer: fine) {
+  html { cursor: none; }
+  html * { cursor: none !important; }
 }
 
 html {
-  background: var(--color-paper);
+  background: var(--color-bg);
 }
 
 body {
-  background: var(--color-paper);
-  color: var(--color-ink);
+  background: var(--color-bg);
+  color: var(--color-fg);
   font-family: var(--font-jp-sans), var(--font-sans), -apple-system, BlinkMacSystemFont, "Hiragino Sans", "ヒラギノ角ゴ ProN", sans-serif;
   font-feature-settings: "palt", "kern";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 ::selection {
   background: var(--color-coral);
-  color: var(--color-paper);
+  color: var(--color-bg);
 }
 
-/* Editorial display utilities */
+/* === Type utilities === */
 .font-display { font-family: var(--font-display), var(--font-jp-display), serif; }
 .font-jp-display { font-family: var(--font-jp-display), var(--font-display), serif; }
 .font-sans-en { font-family: var(--font-sans), -apple-system, sans-serif; }
 .font-jp-sans { font-family: var(--font-jp-sans), var(--font-sans), sans-serif; }
 .font-mono { font-family: var(--font-mono), ui-monospace, monospace; }
 
-/* Editorial number styling — slim italic Fraunces opsz 144 */
 .num-display {
   font-family: var(--font-display), serif;
   font-style: italic;
@@ -71,13 +81,37 @@ body {
   text-transform: uppercase;
 }
 
-/* Hairline rule */
-.rule {
-  border-color: var(--color-line);
+.label-mono {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
 }
-.rule-strong {
-  border-color: var(--color-line-strong);
+
+/* Terminal arrow prefix */
+.term::before {
+  content: "→ ";
+  color: var(--color-coral);
+  font-family: var(--font-mono), monospace;
 }
+
+/* Holographic gradient text */
+.holo {
+  background: linear-gradient(110deg, #ff5a3c 0%, #b566ff 35%, #6cf2ff 65%, #ff5a3c 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: holo-shift 6s ease-in-out infinite;
+}
+@keyframes holo-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Hairline rules */
+.rule { border-color: var(--color-line); }
+.rule-strong { border-color: var(--color-line-strong); }
 
 /* Layout grid */
 .grid-12 {
@@ -97,20 +131,23 @@ body {
   padding-inline: clamp(20px, 4vw, 56px);
 }
 
-/* Reveal animation primitive */
-.reveal-line {
-  display: inline-block;
-  overflow: hidden;
-  vertical-align: bottom;
+/* Noise grain overlay (pseudo on body) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
-.reveal-line > span {
-  display: inline-block;
-  transform: translateY(110%);
-  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.is-revealed .reveal-line > span,
-.reveal-line.is-revealed > span {
-  transform: translateY(0);
+
+/* Subtle gradient meshes across page */
+.mesh-coral {
+  background:
+    radial-gradient(ellipse 60% 80% at 80% 20%, rgba(255, 90, 60, 0.18), transparent 60%),
+    radial-gradient(ellipse 50% 70% at 10% 90%, rgba(181, 102, 255, 0.10), transparent 60%);
 }
 
 /* Marquee */
@@ -124,21 +161,31 @@ body {
   to   { transform: translateX(-50%); }
 }
 
-/* Smooth scroll bookkeeping (Lenis) */
-html.lenis, html.lenis body {
-  height: auto;
+/* Scanlines for terminal feel */
+.scanlines {
+  position: relative;
 }
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-.lenis.lenis-stopped {
-  overflow: hidden;
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(255, 255, 255, 0.015) 2px,
+    rgba(255, 255, 255, 0.015) 3px
+  );
+  pointer-events: none;
 }
 
-/* Disable smooth scroll on reduced motion */
+/* Smooth scroll bookkeeping (Lenis) */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

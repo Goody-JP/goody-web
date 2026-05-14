@@ -7,7 +7,7 @@ import {
   Zen_Kaku_Gothic_New,
 } from "next/font/google";
 import "./globals.css";
-import { SmoothScroll } from "@/components/smooth-scroll";
+import { ClientShell } from "@/components/client-shell";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   title: "Goody — 未経験でも、つくる側へ。",
   description:
     "3D・動画・UI/UX・アプリ・グラフィック・AI。経験ゼロから本物のクライアントワークへ。Goodyは初心者クリエイターのための案件マッチングプラットフォームです。",
-  metadataBase: new URL("https://goody-jp.github.io"),
+  metadataBase: new URL("https://goody-web.vercel.app"),
   openGraph: {
     title: "Goody — 未経験でも、つくる側へ。",
     description:
@@ -66,8 +66,7 @@ export default function RootLayout({
       className={`${fraunces.variable} ${onest.variable} ${plexMono.variable} ${shippori.variable} ${zenKaku.variable}`}
     >
       <body>
-        <SmoothScroll />
-        {children}
+        <ClientShell>{children}</ClientShell>
       </body>
     </html>
   );
