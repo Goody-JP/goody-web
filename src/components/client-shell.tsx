@@ -6,9 +6,17 @@ import { World } from "./world";
 import { Cursor } from "./cursor";
 import { LoadingScreen } from "./loading";
 
+export type Theme = "night" | "day";
+
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const progressRef = useRef(0);
   const [loaded, setLoaded] = useState(false);
+  const [theme, setTheme] = useState<Theme>("night");
+
+  // Apply / remove .day class on <html> so CSS can react globally
+  useEffect(() => {
+    document.documentElement.classList.toggle("day", theme === "day");
+  }, [theme]);
 
   useEffect(() => {
     const prefersReduced = window.matchMedia(
@@ -41,7 +49,6 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
     window.addEventListener("scroll", updateProgress, { passive: true });
     window.addEventListener("resize", updateProgress);
 
-    // Allow loading screen for at least 800ms for choreography
     const t = setTimeout(() => setLoaded(true), 1100);
 
     return () => {
@@ -57,8 +64,36 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
     <>
       <LoadingScreen done={loaded} />
       <Cursor />
-      <World progressRef={progressRef} />
+      <World progressRef={progressRef} theme={theme} />
+      <ThemeToggle theme={theme} setTheme={setTheme} />
       <div className="relative z-10">{children}</div>
     </>
+  );
+}
+
+function ThemeToggle({
+  theme,
+  setTheme,
+}: {
+  theme: Theme;
+  setTheme: (t: Theme) => void;
+}) {
+  return (
+    <button
+      onClick={() => setTheme(theme === "day" ? "night" : "day")}
+      aria-label={`Switch to ${theme === "day" ? "night" : "day"} mode`}
+      className="fixed top-[88px] right-[clamp(20px,4vw,56px)] z-50 group"
+    >
+      <span className="sr-only">Theme</span>
+      <div className="flex items-center gap-2 label-mono px-3 py-2 border border-line-strong rounded-full backdrop-blur-md hover:border-coral transition-colors">
+        <span className={theme === "night" ? "text-coral" : "text-fg-mute"}>
+          NIGHT
+        </span>
+        <span className="text-fg-faint">/</span>
+        <span className={theme === "day" ? "text-coral" : "text-fg-mute"}>
+          DAY
+        </span>
+      </div>
+    </button>
   );
 }

@@ -38,8 +38,8 @@ export function Hud() {
         <div className="label-mono text-fg-faint mt-1">SCROLL TO DESCEND HELIX</div>
       </div>
 
-      {/* Top-right meta HUD */}
-      <div className="hidden md:block fixed top-[88px] right-[clamp(20px,4vw,56px)] z-40 text-right pointer-events-none">
+      {/* Top-right meta HUD — sit below theme toggle */}
+      <div className="hidden md:block fixed top-[150px] right-[clamp(20px,4vw,56px)] z-40 text-right pointer-events-none">
         <div className="label-mono text-fg-mute">MMXXVI · 東京</div>
         <div className="label-mono text-fg-faint mt-1">35.6762° N · 139.6503° E</div>
       </div>

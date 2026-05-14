@@ -83,7 +83,7 @@ const PANELS: PanelData[] = [
 
 /* ───────── Central iridescent sphere (the brand object) ───────── */
 
-function Centerpiece() {
+function Centerpiece({ theme }: { theme: "night" | "day" }) {
   const ref = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.MeshPhysicalMaterial>(null);
 
@@ -95,17 +95,19 @@ function Centerpiece() {
     }
   });
 
+  // In day mode the sphere is a softer chrome that picks up the sky/Fuji.
+  const dayMode = theme === "day";
+
   return (
     <group ref={ref}>
-      {/* Iridescent core sphere */}
       <mesh>
         <icosahedronGeometry args={[SPHERE_RADIUS, 6]} />
         <meshPhysicalMaterial
           ref={matRef}
-          color="#0c0c0c"
-          roughness={0.04}
+          color={dayMode ? "#fafaf7" : "#0c0c0c"}
+          roughness={dayMode ? 0.08 : 0.04}
           metalness={1}
-          iridescence={1}
+          iridescence={dayMode ? 0.4 : 1}
           iridescenceIOR={1.7}
           iridescenceThicknessRange={[120, 700]}
           clearcoat={1}
@@ -113,19 +115,13 @@ function Centerpiece() {
         />
       </mesh>
 
-      {/* Subtle outer wireframe halo for techy feel */}
-      <mesh>
-        <icosahedronGeometry args={[SPHERE_RADIUS * 1.18, 1]} />
-        <meshBasicMaterial
-          color="#ff5a3c"
-          wireframe
-          transparent
-          opacity={0.18}
-        />
-      </mesh>
-
-      {/* Inner coral light source */}
-      <pointLight color="#ff5a3c" intensity={4} distance={10} decay={1.4} />
+      {/* Inner coral light — gives the sphere its warm interior glow */}
+      <pointLight
+        color={dayMode ? "#ffae8a" : "#ff5a3c"}
+        intensity={dayMode ? 2 : 4}
+        distance={10}
+        decay={1.4}
+      />
     </group>
   );
 }
@@ -137,11 +133,13 @@ function Panel({
   index,
   total,
   ringRotationRef,
+  theme,
 }: {
   data: PanelData;
   index: number;
   total: number;
   ringRotationRef: { current: number };
+  theme: "night" | "day";
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -207,14 +205,14 @@ function Panel({
         <planeGeometry args={[PANEL_W, PANEL_H]} />
         <meshStandardMaterial
           ref={matRef}
-          color="#0a0a0a"
+          color={theme === "day" ? "#f5f1e8" : "#0a0a0a"}
           emissive="#ff5a3c"
           emissiveIntensity={0.15}
           transparent
           opacity={0.7}
           side={THREE.DoubleSide}
-          metalness={0.7}
-          roughness={0.3}
+          metalness={theme === "day" ? 0.3 : 0.7}
+          roughness={theme === "day" ? 0.6 : 0.3}
         />
       </mesh>
       <lineSegments position={[0, 0, 0.002]}>
@@ -233,18 +231,20 @@ function Panel({
       >
         <div
           ref={htmlContentRef}
-          className="size-full bg-bg/85 backdrop-blur-md border border-coral/40 px-10 py-8 flex flex-col gap-4 text-fg transition-opacity duration-200"
+          className={`size-full backdrop-blur-md border border-coral/40 px-10 py-8 flex flex-col gap-4 transition-opacity duration-200 ${
+            theme === "day" ? "bg-paper/85 text-ink" : "bg-bg/85 text-fg"
+          }`}
           style={{ opacity: 0 }}
         >
-          <div className="flex items-center justify-between label-mono text-fg-mute">
+          <div className={`flex items-center justify-between label-mono ${theme === "day" ? "text-ink-mute" : "text-fg-mute"}`}>
             <span className="text-coral">→ {data.num}</span>
             <span>[ {data.label} ]</span>
           </div>
           <h3 className="font-jp-display text-[44px] leading-[1.05] font-medium">
             {data.jpTitle}
           </h3>
-          <div className="label-mono text-fg-mute">→ {data.enTitle}</div>
-          <p className="font-jp-sans text-[13px] leading-[1.7] text-fg-soft mt-auto">
+          <div className={`label-mono ${theme === "day" ? "text-ink-mute" : "text-fg-mute"}`}>→ {data.enTitle}</div>
+          <p className={`font-jp-sans text-[13px] leading-[1.7] mt-auto ${theme === "day" ? "text-ink-soft" : "text-fg-soft"}`}>
             {data.body}
           </p>
         </div>
@@ -255,7 +255,13 @@ function Panel({
 
 /* ───────── Particles around the scene ───────── */
 
-function Particles({ count = 2400 }: { count?: number }) {
+function Particles({
+  count = 2400,
+  theme = "night",
+}: {
+  count?: number;
+  theme?: "night" | "day";
+}) {
   const ref = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
     const arr = new Float32Array(count * 3);
@@ -283,8 +289,8 @@ function Particles({ count = 2400 }: { count?: number }) {
         sizeAttenuation
         transparent
         depthWrite={false}
-        color="#ff7a5c"
-        opacity={0.85}
+        color={theme === "day" ? "#ffffff" : "#ff7a5c"}
+        opacity={theme === "day" ? 0.55 : 0.85}
       />
     </Points>
   );
@@ -318,11 +324,15 @@ function MouseParallax({ children }: { children: React.ReactNode }) {
 
 export function World({
   progressRef,
+  theme = "night",
 }: {
   progressRef: { current: number };
+  theme?: "night" | "day";
 }) {
   // Smoothed ring rotation that reads scroll progress
   const ringRotationRef = useRef(0);
+
+  const dayMode = theme === "day";
 
   return (
     <div className="fixed inset-0 z-0">
@@ -331,18 +341,29 @@ export function World({
         camera={{ position: [0, 0.6, 8.5], fov: 38 }}
         gl={{ antialias: true, alpha: true }}
       >
-        <color attach="background" args={["#050505"]} />
-        <fog attach="fog" args={["#050505", 9, 22]} />
+        <color attach="background" args={[dayMode ? "#e7d9c0" : "#050505"]} />
+        <fog
+          attach="fog"
+          args={[dayMode ? "#e7d9c0" : "#050505", 9, 22]}
+        />
 
-        <ambientLight intensity={0.18} />
-        <directionalLight position={[3, 5, 4]} intensity={0.55} color="#ffe1d6" />
-        <directionalLight position={[-4, -2, -3]} intensity={0.4} color="#b566ff" />
+        <ambientLight intensity={dayMode ? 0.45 : 0.18} />
+        <directionalLight
+          position={[3, 5, 4]}
+          intensity={dayMode ? 0.9 : 0.55}
+          color={dayMode ? "#ffeacc" : "#ffe1d6"}
+        />
+        <directionalLight
+          position={[-4, -2, -3]}
+          intensity={dayMode ? 0.25 : 0.4}
+          color={dayMode ? "#a8c8ff" : "#b566ff"}
+        />
 
         <RingDriver progressRef={progressRef} ringRotationRef={ringRotationRef} />
 
         <MouseParallax>
           <Float speed={0.8} rotationIntensity={0.06} floatIntensity={0.15}>
-            <Centerpiece />
+            <Centerpiece theme={theme} />
             {PANELS.map((p, i) => (
               <Panel
                 key={p.num}
@@ -350,13 +371,18 @@ export function World({
                 index={i}
                 total={PANELS.length}
                 ringRotationRef={ringRotationRef}
+                theme={theme}
               />
             ))}
           </Float>
-          <Particles count={2400} />
+          <Particles count={2400} theme={theme} />
         </MouseParallax>
 
-        <Environment preset="night" />
+        {/* Environment provides the reflection map on the sphere. "city" for night
+            (densely lit urban skyline ≈ Tokyo at night), "park" for day (sky +
+            distant landscape ≈ Fuji feel). For an authentic Tokyo Tower / Fuji
+            reflection we'd swap to a custom HDRI via <Environment files="..."/>. */}
+        <Environment preset={dayMode ? "park" : "city"} />
       </Canvas>
     </div>
   );
